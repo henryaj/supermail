@@ -1,0 +1,16 @@
+{
+  "manifest_version": 3,
+  "name": "supermail",
+  "version": "0.1.0",
+  "description": "Command bar, hotkeys and de-cluttering for Gmail. No servers, no scopes.",
+  "permissions": ["storage", "clipboardWrite"],
+  "host_permissions": ["https://mail.google.com/*"],
+  "content_scripts": [
+    {
+      "matches": ["https://mail.google.com/*"],
+      "js": ["content/fuzzy.js", "content/gmail.js", "content/palette.js", "content/main.js"],
+      "css": ["content/declutter.css"],
+      "run_at": "document_idle"
+    }
+  ]
+}

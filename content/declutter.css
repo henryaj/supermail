@@ -1,0 +1,34 @@
+/* Toggled by classes on <html>. aria-label selectors first: they rot far slower than
+   Gmail's obfuscated class names. If a toggle stops working, it's these lines. */
+
+/* Chat / Meet / Spaces */
+/* Verified: nav headers are div[role=link][aria-label^="Chat"|"Meet"] wrapped in a section
+   div; :has() lets us drop the whole section without naming an obfuscated class. */
+html.sm-hide-chat [role="navigation"] div:has(> [role="link"][aria-label^="Chat"]),
+html.sm-hide-chat [role="navigation"] div:has(> [role="link"][aria-label^="Meet"]),
+html.sm-hide-chat [role="navigation"] div:has(> [role="link"][aria-label^="Spaces"]),
+html.sm-hide-chat iframe[aria-label^="Chat"],
+html.sm-hide-chat [role="tab"][aria-label*="Chat" i],
+html.sm-hide-chat [role="tab"][aria-label*="Meet" i],
+html.sm-hide-chat [role="tab"][aria-label*="Spaces" i],
+html.sm-hide-chat [aria-label="Start a video call"],
+html.sm-hide-chat [data-tooltip*="New meeting" i] { display: none !important; }
+
+/* Gemini panel, side rail and AI chips */
+html.sm-hide-gemini [aria-label="Side panel"],
+html.sm-hide-gemini [aria-label*="Gemini" i],
+html.sm-hide-gemini [data-tooltip*="Gemini" i],
+html.sm-hide-gemini [aria-label*="Summarize this email" i],
+html.sm-hide-gemini [data-tooltip*="Summarize" i],
+html.sm-hide-gemini [aria-label*="Help me write" i],
+html.sm-hide-gemini .brC-brG,
+html.sm-hide-gemini .bAw { display: none !important; }
+
+/* Category tabs (Primary / Promotions / Social) */
+html.sm-hide-tabs [role="main"] [role="tablist"],
+html.sm-hide-tabs table.aKh { display: none !important; }
+
+/* Rows tighter than Gmail's own "compact" */
+html.sm-dense tr.zA > td { padding-top: 0 !important; padding-bottom: 0 !important; }
+html.sm-dense tr.zA { height: 26px !important; }
+html.sm-dense .zA .y6 span { line-height: 1.25 !important; }
