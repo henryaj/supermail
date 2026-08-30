@@ -52,6 +52,34 @@ SM.view = () => SM.composeOpen() ? 'compose-open' : SM.threadOpen() ? 'thread-op
 // Row under the keyboard cursor in the thread list.
 SM.focusedRow = () => document.querySelector('tr.zA.btb') || document.querySelector('[role="main"] tr.zA[aria-selected="true"]');
 
+// Verified in a real inbox: with Priority Inbox / sections, Gmail refuses every thread action
+// on the bare keyboard cursor ("No conversations selected.") — only star works. Selecting the
+// cursor row first with `x` makes the action work, and is a no-op difference in a plain inbox.
+SM.hasSelection = () => !!document.querySelector('[role="main"] [role="checkbox"][aria-checked="true"]');
+
+// We must never leave a selection of our own lying around: Gmail acts on the selection rather
+// than the cursor, so a stale auto-selection silently retargets the NEXT action at the wrong
+// thread (mark A read, move the cursor to B, hit e — and A gets archived).
+let mine = null; // the row we ticked on the user's behalf
+const boxOf = (row) => row && row.querySelector('[role="checkbox"]');
+const isChecked = (row) => { const b = boxOf(row); return !!b && b.getAttribute('aria-checked') === 'true'; };
+const dropMine = () => {
+  if (mine && mine.isConnected && isChecked(mine)) boxOf(mine).click();
+  mine = null;
+};
+
+// `keep` is for actions that open a picker (label, move): clicking a checkbox while their menu
+// is up would dismiss it, so that one is cleared at the start of the next action instead.
+SM.rowKey = (spec, keep) => {
+  if (SM.view() !== 'list-view') return SM.press(spec);
+  const row = SM.focusedRow();
+  if (mine && mine !== row) dropMine();
+  if (SM.hasSelection()) return SM.press(spec); // a selection the user made: act on it, as Gmail would
+  mine = row;
+  SM.press('x ' + spec);
+  if (!keep) setTimeout(dropMine, 800);
+};
+
 SM.go = (hash) => { location.hash = hash; };
 SM.search = (q) => { location.hash = '#search/' + encodeURIComponent(q); };
 

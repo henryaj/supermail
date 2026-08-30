@@ -4,7 +4,7 @@
   const MOD = navigator.platform.includes('Mac') ? 'mod' : 'ctrl';
   const MODSYM = MOD === 'mod' ? '⌘' : 'Ctrl+';
 
-  let settings = { 'hide-chat': false, 'hide-gemini': false, 'hide-tabs': false, 'dense': false, 'optimistic': true };
+  let settings = { 'hide-chat': false, 'hide-gemini': false, 'hide-tabs': false, 'dense': false };
   let usage = {};
   let keys = {};
 
@@ -18,6 +18,12 @@
     'shift+g': 'label-jump',
     ...Object.fromEntries([0, 1, 2, 3, 4].map((n) => [MOD + '+' + (n + 1), 'account-' + n]))
   };
+  // Gmail's own thread shortcuts do nothing in a sectioned inbox (see gmail.js). Intercept
+  // them in list view and re-issue them with the cursor row selected. Elsewhere Gmail is fine
+  // on its own, so we stay out of the way.
+  const NATIVE_FIX = { 'e': 'archive', '#': 'delete', 'shift+#': 'delete', 'shift+i': 'mark-read',
+    'shift+u': 'mark-unread', 'l': 'label', 'v': 'move', 'm': 'mute', 'b': 'snooze', 'shift+!': 'spam' };
+
   const SYM = { mod: '⌘', ctrl: '⌃', shift: '⇧', alt: '⌥' };
   const pretty = (spec) => spec.split('+').map((p) => SYM[p] || p.toUpperCase()).join('');
   function shortcutFor(id) {
@@ -30,6 +36,7 @@
   // ---- commands -----------------------------------------------------------
   // ctx: always | list-view | thread-open | compose-open (pipe-separated)
   const key = (spec) => () => SM.press(spec);
+  const rowKey = (spec, keep) => () => SM.rowKey(spec, keep); // thread actions: select the cursor row first
   const cmd = (id, title, ctx, hint, run, keywords, section) =>
     ({ id, title, ctx, hint, run, keywords: keywords || [], section: section || '' });
 
@@ -45,21 +52,21 @@
     cmd('sent', 'Go to Sent', 'always', 'g t', key('g t'), ['nav']),
     cmd('drafts', 'Go to Drafts', 'always', 'g d', key('g d'), ['nav']),
     cmd('allmail', 'Go to All Mail', 'always', 'g a', key('g a'), ['nav', 'archive']),
-    cmd('label-jump', 'Jump to label…', 'always', '', () => P.open(labelProvider), ['go', 'folder']),
+    cmd('label-jump', 'Jump to label…', 'always', shortcutFor('label-jump'), () => P.open(labelProvider), ['go', 'folder']),
 
-    cmd('archive', 'Archive', 'list-view|thread-open', 'e', key('e'), ['done']),
+    cmd('archive', 'Archive', 'list-view|thread-open', 'e', rowKey('e'), ['done']),
     cmd('read-archive', 'Mark read and archive', 'list-view|thread-open', shortcutFor('read-archive'),
-      () => { SM.press('shift+i'); setTimeout(() => SM.press('e'), 80); }, ['done', 'clear']),
-    cmd('delete', 'Delete', 'list-view|thread-open', '#', key('#'), ['trash', 'bin']),
-    cmd('snooze', 'Snooze', 'list-view|thread-open', 'b', key('b'), ['later', 'remind']),
-    cmd('mark-read', 'Mark as read', 'list-view|thread-open', '⇧I', key('shift+i')),
-    cmd('mark-unread', 'Mark as unread', 'list-view|thread-open', '⇧U', key('shift+u')),
+      () => { SM.rowKey('shift+i'); setTimeout(() => SM.rowKey('e'), 220); }, ['done', 'clear']),
+    cmd('delete', 'Delete', 'list-view|thread-open', '#', rowKey('#'), ['trash', 'bin']),
+    cmd('snooze', 'Snooze', 'list-view|thread-open', 'b', rowKey('b'), ['later', 'remind']),
+    cmd('mark-read', 'Mark as read', 'list-view|thread-open', '⇧I', rowKey('shift+i')),
+    cmd('mark-unread', 'Mark as unread', 'list-view|thread-open', '⇧U', rowKey('shift+u')),
     cmd('star', 'Star', 'list-view|thread-open', 's', key('s'), ['flag']),
-    cmd('label', 'Apply label…', 'list-view|thread-open', 'l', key('l'), ['tag']),
-    cmd('move', 'Move to…', 'list-view|thread-open', 'v', key('v')),
-    cmd('mute', 'Mute thread', 'list-view|thread-open', 'm', key('m'), ['ignore']),
-    cmd('spam', 'Report spam', 'list-view|thread-open', '!', key('!'), ['junk']),
-    cmd('important', 'Mark important', 'list-view|thread-open', '=', key('=')),
+    cmd('label', 'Apply label…', 'list-view|thread-open', 'l', rowKey('l', true), ['tag']),
+    cmd('move', 'Move to…', 'list-view|thread-open', 'v', rowKey('v', true)),
+    cmd('mute', 'Mute thread', 'list-view|thread-open', 'm', rowKey('m'), ['ignore']),
+    cmd('spam', 'Report spam', 'list-view|thread-open', '!', rowKey('!'), ['junk']),
+    cmd('important', 'Mark important', 'list-view|thread-open', '=', rowKey('=')),
     cmd('select-all', 'Select all in view', 'list-view', '* a', key('* a'), ['bulk']),
     cmd('refresh', 'Refresh inbox', 'list-view', '', () => SM.press('u'), ['reload']),
 
@@ -81,7 +88,6 @@
     toggle('hide-gemini', 'Hide Gemini & AI chips'),
     toggle('hide-tabs', 'Hide category tabs'),
     toggle('dense', 'Extra-dense rows'),
-    toggle('optimistic', 'Instant archive (optimistic UI)'),
     ...[0, 1, 2, 3, 4].map((n) => cmd('account-' + n, `Switch to account ${n + 1}`, 'always',
       MODSYM + (n + 1), () => SM.switchAccount(n), ['user', 'inbox', 'profile'], 'Account'))
   ];
@@ -128,7 +134,8 @@
         }
       }
       if (!m) continue;
-      out.push({ ...c, title, pos: m.pos, score: m.score + boost(c.id), run: () => invoke(c.id) });
+      const contextual = c.ctx !== 'always' ? 0.5 : 0;
+      out.push({ ...c, title, pos: m.pos, score: m.score + boost(c.id) + contextual, run: () => invoke(c.id) });
     }
     return out.sort((a, b) => b.score - a.score).slice(0, 9);
   }
@@ -185,6 +192,7 @@
 
   // ---- key handling -------------------------------------------------------
   // Listen on window/capture so we run before Gmail's own document-level handlers.
+  let prefixAt = 0; // last time a Gmail sequence prefix (`g`, `*`) was pressed
   window.addEventListener('keydown', (e) => {
     if (e.__sm) return; // keys we synthesised for Gmail
     if (P.isOpen()) {
@@ -197,8 +205,14 @@
       return;
     }
 
-    const id = keys[specOf(e)];
+    const spec = specOf(e);
+    const id = keys[spec];
     const editable = SM.isEditable(e.target);
+    // Gmail has two-key sequences (`g l`, `* a`). If the previous key was a prefix, the key we
+    // see now belongs to Gmail's sequence, not to us.
+    const inSequence = Date.now() - prefixAt < 1500;
+    if (!editable && !e.metaKey && !e.ctrlKey && !e.altKey)
+      prefixAt = /^[g*]$/i.test(e.key) ? Date.now() : 0;
     if (id === 'palette') {
       const sel = document.getSelection();
       if (editable && sel && !sel.isCollapsed) return; // leave Cmd+K = insert link in compose
@@ -206,7 +220,8 @@
       P.open(provider);
       return;
     }
-    if (!id || editable) { optimistic(e, editable); return; }
+    if (!id || editable) return;
+    if (NATIVE_FIX[spec] === id && (inSequence || SM.view() !== 'list-view')) return; // Gmail handles these itself there
     e.preventDefault(); e.stopImmediatePropagation();
     invoke(id);
   }, true);
@@ -217,23 +232,11 @@
     }, true);
   }
 
-  // Perceived latency: hide the row the moment you hit archive/delete instead of waiting
-  // for Gmail's round-trip + re-render. Self-heals if the row is still there 2s later.
-  function optimistic(e, editable) {
-    if (!settings.optimistic || editable || e.metaKey || e.ctrlKey || e.altKey) return;
-    if (!['e', '#', 'y', '[', ']'].includes(e.key)) return;
-    if (!/^#(inbox|label\/|search\/|starred|category)/.test(location.hash) || SM.view() !== 'list-view') return;
-    const row = SM.focusedRow();
-    if (!row) return;
-    row.style.display = 'none';
-    setTimeout(() => { if (row.isConnected) row.style.display = ''; }, 2000);
-  }
-
   chrome.storage.local.get(['settings', 'usage', 'keys'], (d) => {
     settings = { ...settings, ...(d.settings || {}) };
     usage = d.usage || {};
-    keys = { ...DEFAULT_KEYS, ...(d.keys || {}) }; // user overrides win; edit via storage for now
+    keys = { ...DEFAULT_KEYS, ...NATIVE_FIX, ...(d.keys || {}) }; // user overrides win; edit via storage for now
     applySettings();
   });
-  keys = { ...DEFAULT_KEYS };
+  keys = { ...DEFAULT_KEYS, ...NATIVE_FIX };
 })();
