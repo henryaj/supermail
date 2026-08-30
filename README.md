@@ -37,6 +37,14 @@ Two sub-modes inside the bar:
 | `⌘1`–`⌘5` | switch Google account (`/u/0`…`/u/4`), keeping the current view |
 
 Everything else in the palette is a native Gmail shortcut being dispatched for you.
+
+**Sectioned inboxes.** With Priority Inbox / multiple inboxes, Gmail refuses every thread action
+aimed at the bare keyboard cursor — `e`, `#`, `l`, `⇧I` and friends just answer "No conversations
+selected." (only `s` works). So thread actions, whether run from the palette or typed natively,
+select the cursor row with `x` first. A selection made this way is cleared again once the action
+lands (or, for the label/move pickers, at the start of the next action) — leaving it behind
+would silently aim your next keystroke at the wrong thread.
+
 `⌘K` stays out of the way when you have text selected in a compose window, so Gmail's
 insert-link still works.
 
@@ -44,9 +52,6 @@ insert-link still works.
 
 In the palette: hide Chat/Meet/Spaces, hide Gemini + AI chips, hide the category tabs,
 extra-dense rows. Toggles persist in `chrome.storage.local`.
-
-"Instant archive" is on by default: `e`/`#`/`[`/`]` hide the focused row immediately instead of
-waiting for Gmail's round-trip. If the row is still there 2s later it comes back.
 
 ## Remapping
 

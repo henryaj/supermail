@@ -21,6 +21,7 @@ html.sm-hide-gemini [data-tooltip*="Gemini" i],
 html.sm-hide-gemini [aria-label*="Summarize this email" i],
 html.sm-hide-gemini [data-tooltip*="Summarize" i],
 html.sm-hide-gemini [aria-label*="Help me write" i],
+html.sm-hide-gemini [role="banner"] [aria-label="Studio"], /* the AI sparkle in the top bar */
 html.sm-hide-gemini .brC-brG,
 html.sm-hide-gemini .bAw { display: none !important; }
 
