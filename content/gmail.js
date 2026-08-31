@@ -95,6 +95,16 @@ SM.rowKey = (spec, keep) => {
   if (!keep) setTimeout(dropMine, 900);
 };
 
+// Gmail renders unsubscribe two different ways and gives neither an aria-label, so this
+// matches on text: a role=button in the list row (only rendered while the row is hovered) and
+// a role=link beside the sender in an open thread. Verified against both. English-only.
+SM.unsubscribeControl = () => {
+  const scope = SM.view() === 'list-view' ? SM.focusedRow() : document.querySelector('[role="main"]');
+  if (!scope) return null;
+  return [...scope.querySelectorAll('[role="button"], [role="link"]')]
+    .find((e) => /^unsubscribe$/i.test((e.textContent || '').trim())) || null;
+};
+
 SM.go = (hash) => { location.hash = hash; };
 SM.search = (q) => { location.hash = '#search/' + encodeURIComponent(q); };
 

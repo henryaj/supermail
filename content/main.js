@@ -17,6 +17,7 @@
     'shift+e': 'read-archive',
     'shift+g': 'label-jump',
     [MOD + '+/']: 'shortcuts',
+    [MOD + '+shift+u']: 'unsubscribe',
     ...Object.fromEntries([0, 1, 2, 3, 4].map((n) => [MOD + '+' + (n + 1), 'account-' + n]))
   };
   // Gmail's own thread shortcuts do nothing in a sectioned inbox (see gmail.js). Intercept
@@ -80,6 +81,8 @@
     cmd('print', 'Print thread', 'thread-open', 'p', key('p')),
     cmd('expand', 'Expand all messages', 'thread-open', ';', key(';')),
 
+    cmd('unsubscribe', 'Unsubscribe…', 'list-view|thread-open', shortcutFor('unsubscribe'), unsubscribe,
+      ['newsletter', 'mailing list', 'stop', 'remove me']),
     cmd('copy-link', 'Copy link to thread', 'list-view|thread-open', shortcutFor('copy-link'), copyLink, ['url', 'share']),
     cmd('new-tab', 'Open thread in new tab', 'list-view|thread-open', shortcutFor('new-tab'), openNewTab, ['window']),
 
@@ -177,6 +180,14 @@
   }
 
   // ---- commands that aren't just a keystroke -------------------------------
+  function unsubscribe() {
+    const el = SM.unsubscribeControl();
+    if (!el) return toast('No unsubscribe link on this thread');
+    const row = el.closest('tr');
+    if (row) row.dispatchEvent(new MouseEvent('mouseover', { bubbles: true })); // row actions render on hover
+    el.click(); // Gmail's own confirmation dialog stands between this and the actual request
+  }
+
   function copyLink() {
     const url = SM.threadLink();
     if (url) navigator.clipboard.writeText(url).then(() => toast('Thread link copied'), () => toast('Copy failed'));

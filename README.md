@@ -35,6 +35,7 @@ Two sub-modes inside the bar:
 | `⌘⇧L` | copy link to thread |
 | `⇧G` | jump to label |
 | `⌘/` | keyboard shortcut cheat sheet |
+| `⌘⇧U` | unsubscribe from this sender |
 | `⌘1`–`⌘5` | switch Google account (`/u/0`…`/u/4`), keeping the current view |
 
 Everything else in the palette is a native Gmail shortcut being dispatched for you.
