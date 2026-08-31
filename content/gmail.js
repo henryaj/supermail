@@ -60,24 +60,39 @@ SM.hasSelection = () => !!document.querySelector('[role="main"] [role="checkbox"
 // We must never leave a selection of our own lying around: Gmail acts on the selection rather
 // than the cursor, so a stale auto-selection silently retargets the NEXT action at the wrong
 // thread (mark A read, move the cursor to B, hit e — and A gets archived).
-let mine = null; // the row we ticked on the user's behalf
+//
+// Track it by thread id, never by node: Gmail rebuilds row elements when a thread changes, so
+// a node reference held across an action is detached by the time we come back to untick it.
+let mineId = null; // the thread we ticked on the user's behalf
 const boxOf = (row) => row && row.querySelector('[role="checkbox"]');
 const isChecked = (row) => { const b = boxOf(row); return !!b && b.getAttribute('aria-checked') === 'true'; };
 const dropMine = () => {
-  if (mine && mine.isConnected && isChecked(mine)) boxOf(mine).click();
-  mine = null;
+  const id = mineId;
+  mineId = null; // cleared first: a throw in the lookup must not strand us mid-action
+  const row = id && SM.rowById(id);
+  if (row && isChecked(row)) boxOf(row).click();
+};
+
+SM.rowById = (id) => {
+  const el = document.querySelector('[data-legacy-thread-id="' + id + '"]');
+  return el ? el.closest('tr') : null;
+};
+SM.rowId = (row) => {
+  const el = row && row.querySelector('[data-legacy-thread-id]');
+  return el ? el.getAttribute('data-legacy-thread-id') : null;
 };
 
 // `keep` is for actions that open a picker (label, move): clicking a checkbox while their menu
 // is up would dismiss it, so that one is cleared at the start of the next action instead.
 SM.rowKey = (spec, keep) => {
   if (SM.view() !== 'list-view') return SM.press(spec);
-  const row = SM.focusedRow();
-  if (mine && mine !== row) dropMine();
+  const id = SM.rowId(SM.focusedRow());
+  if (mineId && mineId !== id) dropMine();
   if (SM.hasSelection()) return SM.press(spec); // a selection the user made: act on it, as Gmail would
-  mine = row;
+  if (!id) return SM.press(spec); // no id to untick by: never tick a box we couldn't find again
+  mineId = id;
   SM.press('x ' + spec);
-  if (!keep) setTimeout(dropMine, 800);
+  if (!keep) setTimeout(dropMine, 900);
 };
 
 SM.go = (hash) => { location.hash = hash; };

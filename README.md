@@ -34,6 +34,7 @@ Two sub-modes inside the bar:
 | `⇧O` | open thread in a new tab |
 | `⌘⇧L` | copy link to thread |
 | `⇧G` | jump to label |
+| `⌘/` | keyboard shortcut cheat sheet |
 | `⌘1`–`⌘5` | switch Google account (`/u/0`…`/u/4`), keeping the current view |
 
 Everything else in the palette is a native Gmail shortcut being dispatched for you.
@@ -47,6 +48,9 @@ would silently aim your next keystroke at the wrong thread.
 
 `⌘K` stays out of the way when you have text selected in a compose window, so Gmail's
 insert-link still works.
+
+`⌘/` opens a cheat sheet of every binding, grouped by where it applies — the same registry the
+palette reads, so it can't drift out of date. `Esc` or `⌘/` closes it.
 
 ### De-clutter toggles
 

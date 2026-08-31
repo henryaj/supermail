@@ -2,9 +2,11 @@
 const SMP = (self.SM = self.SM || {});
 
 SMP.Palette = (() => {
-  let host, root, input, list, provide = () => [], items = [], sel = 0, prevFocus = null;
+  let host, root, input, list, sheet, mode = 'palette';
+  let provide = () => [], items = [], sel = 0, prevFocus = null;
 
   const CSS = `
+    [hidden]{display:none!important} /* beats our own author-origin display rules below */
     .bg{position:fixed;inset:0;background:rgba(32,33,36,.32)}
     .box{position:fixed;left:50%;top:16vh;transform:translateX(-50%);width:min(620px,92vw);
       background:#fff;color:#202124;border-radius:12px;overflow:hidden;
@@ -21,10 +23,19 @@ SMP.Palette = (() => {
       border:1px solid #dadce0;border-bottom-width:2px;border-radius:4px;padding:3px 5px;flex:none}
     mark{background:none;color:#1a73e8;font-weight:600}
     .empty{padding:14px 18px;color:#80868b}
+    .sheet{padding:4px 18px 16px;max-height:72vh;overflow-y:auto;outline:none}
+    .cols{column-count:2;column-gap:26px}
+    .sheet h2{margin:14px 0 4px;font-size:10px;letter-spacing:.09em;text-transform:uppercase;
+      color:#80868b;font-weight:700;break-after:avoid}
+    .sheet .r{display:flex;align-items:baseline;gap:10px;padding:2px 0;break-inside:avoid}
+    .sheet .r span{flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+    .foot{border-top:1px solid #e8eaed;margin-top:14px;padding-top:10px;color:#80868b;font-size:12px}
+    .foot code{font:11px ui-monospace,SFMono-Regular,Menlo,monospace}
     @media (prefers-color-scheme:dark){
       .box{background:#202124;color:#e8eaed}
       .list{border-color:#3c4043}
       .row.sel{background:#37393c}
+      .foot{border-color:#3c4043}
       kbd{color:#bdc1c6;background:#2d2f31;border-color:#5f6368}
       mark{color:#8ab4f8}
     }`;
@@ -37,9 +48,10 @@ SMP.Palette = (() => {
     root = host.attachShadow({ mode: 'open' });
     root.innerHTML = `<style>${CSS}</style><div class="bg"></div><div class="box">` +
       `<input spellcheck="false" autocomplete="off" placeholder="Command…  (go &lt;label&gt; to jump, / &lt;query&gt; to search)">` +
-      `<div class="list"></div></div>`;
+      `<div class="list"></div><div class="sheet" tabindex="-1" hidden></div></div>`;
     input = root.querySelector('input');
     list = root.querySelector('.list');
+    sheet = root.querySelector('.sheet');
     root.querySelector('.bg').addEventListener('mousedown', close);
     input.addEventListener('input', render);
     list.addEventListener('mousemove', (e) => {
@@ -89,8 +101,27 @@ SMP.Palette = (() => {
     if (it) setTimeout(() => it.run(), 0); // after focus is restored, so Gmail gets the keys
   }
 
+  // Cheat sheet: same host, same theme, different body. Static — no filtering, no selection.
+  function openSheet(sections, footer) {
+    ensure();
+    mode = 'sheet';
+    prevFocus = document.activeElement;
+    input.hidden = list.hidden = true;
+    sheet.hidden = false;
+    sheet.innerHTML = '<div class="cols">' + sections.map((s) =>
+      `<h2>${esc(s.title)}</h2>` + s.rows.map((r) =>
+        `<div class="r"><span>${esc(r.title)}</span><kbd>${esc(r.hint)}</kbd></div>`).join('')).join('') +
+      '</div>' + (footer ? `<div class="foot">${footer}</div>` : '');
+    host.style.display = 'block';
+    sheet.scrollTop = 0;
+    sheet.focus();
+  }
+
   function open(provider) {
     ensure();
+    mode = 'palette';
+    input.hidden = list.hidden = false;
+    sheet.hidden = true;
     provide = provider;
     prevFocus = document.activeElement;
     host.style.display = 'block';
@@ -102,9 +133,12 @@ SMP.Palette = (() => {
   function close() {
     if (!host || host.style.display === 'none') return;
     host.style.display = 'none';
+    mode = 'palette';
     if (prevFocus && prevFocus.isConnected) prevFocus.focus();
     else document.body.focus();
   }
 
-  return { open, close, move, run, isOpen: () => !!host && host.style.display === 'block' };
+  return { open, openSheet, close, move, run,
+    isOpen: () => !!host && host.style.display === 'block',
+    isSheet: () => mode === 'sheet' };
 })();
