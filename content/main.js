@@ -185,7 +185,7 @@
     if (!el) return toast('No unsubscribe link on this thread');
     const row = el.closest('tr');
     if (row) row.dispatchEvent(new MouseEvent('mouseover', { bubbles: true })); // row actions render on hover
-    el.click(); // Gmail's own confirmation dialog stands between this and the actual request
+    SM.realClick(el); // opens Gmail's own confirmation dialog; nothing is sent until you confirm there
   }
 
   function copyLink() {

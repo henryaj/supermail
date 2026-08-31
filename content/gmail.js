@@ -95,6 +95,18 @@ SM.rowKey = (spec, keep) => {
   if (!keep) setTimeout(dropMine, 900);
 };
 
+// Gmail's buttons are wired through jsaction's delegated dispatcher, which ignores a bare
+// .click() — it wants the pointer sequence a real mouse produces. (Row checkboxes are the
+// exception and do respond to .click(); that path is verified, so it stays as it is.)
+SM.realClick = (el) => {
+  const opts = { bubbles: true, cancelable: true, composed: true, view: window, button: 0 };
+  el.dispatchEvent(new PointerEvent('pointerdown', { ...opts, buttons: 1 }));
+  el.dispatchEvent(new MouseEvent('mousedown', { ...opts, buttons: 1 }));
+  el.dispatchEvent(new PointerEvent('pointerup', opts));
+  el.dispatchEvent(new MouseEvent('mouseup', opts));
+  el.dispatchEvent(new MouseEvent('click', opts));
+};
+
 // Gmail renders unsubscribe two different ways and gives neither an aria-label, so this
 // matches on text: a role=button in the list row (only rendered while the row is hovered) and
 // a role=link beside the sender in an open thread. Verified against both. English-only.
