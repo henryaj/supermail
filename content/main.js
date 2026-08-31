@@ -16,6 +16,7 @@
     [MOD + '+shift+l']: 'copy-link',
     'shift+e': 'read-archive',
     'shift+g': 'label-jump',
+    [MOD + '+/']: 'shortcuts',
     ...Object.fromEntries([0, 1, 2, 3, 4].map((n) => [MOD + '+' + (n + 1), 'account-' + n]))
   };
   // Gmail's own thread shortcuts do nothing in a sectioned inbox (see gmail.js). Intercept
@@ -53,6 +54,8 @@
     cmd('drafts', 'Go to Drafts', 'always', 'g d', key('g d'), ['nav']),
     cmd('allmail', 'Go to All Mail', 'always', 'g a', key('g a'), ['nav', 'archive']),
     cmd('label-jump', 'Jump to label…', 'always', shortcutFor('label-jump'), () => P.open(labelProvider), ['go', 'folder']),
+    cmd('shortcuts', 'Keyboard shortcuts', 'always', shortcutFor('shortcuts'), () => P.openSheet(sheetSections(), FOOTER),
+      ['help', 'cheat sheet', 'keys', 'bindings', 'reference']),
 
     cmd('archive', 'Archive', 'list-view|thread-open', 'e', rowKey('e'), ['done']),
     cmd('read-archive', 'Mark read and archive', 'list-view|thread-open', shortcutFor('read-archive'),
@@ -94,6 +97,28 @@
 
   const byId = Object.fromEntries(COMMANDS.map((c) => [c.id, c]));
   const titleOf = (c) => typeof c.title === 'function' ? c.title() : c.title;
+
+  // ---- cheat sheet --------------------------------------------------------
+  const FOOTER = 'Keys with ⌘ or ⇧ are supermail\u2019s. Plain letters are Gmail\u2019s own, dispatched for you. ' +
+    'Inside the palette: <code>go &lt;label&gt;</code> jumps to a label, <code>/ &lt;query&gt;</code> searches.';
+
+  function sheetSections() {
+    const rows = (ctx) => COMMANDS
+      .filter((c) => c.ctx === ctx && c.hint && c.id !== 'shortcuts' && !c.id.startsWith('account-'))
+      .map((c) => ({ title: titleOf(c), hint: c.hint }));
+    return [
+      { title: 'supermail', rows: [
+        { title: 'Command palette', hint: shortcutFor('palette') },
+        { title: 'This cheat sheet', hint: shortcutFor('shortcuts') },
+        { title: 'Switch account 1–5', hint: MODSYM + '1–5' }
+      ] },
+      { title: 'Anywhere', rows: rows('always') },
+      { title: 'List or thread', rows: rows('list-view|thread-open') },
+      { title: 'List view', rows: rows('list-view') },
+      { title: 'Thread open', rows: rows('thread-open') },
+      { title: 'Compose', rows: rows('compose-open') }
+    ].filter((s) => s.rows.length);
+  }
 
   // ---- ranking ------------------------------------------------------------
   function boost(id) {
@@ -198,6 +223,12 @@
     if (P.isOpen()) {
       e.stopImmediatePropagation(); // Gmail must not see anything typed into the palette
       const k = e.key;
+      if (P.isSheet()) {
+        const bound = keys[specOf(e)];
+        if (k === 'Escape' || bound === 'shortcuts') { e.preventDefault(); P.close(); }
+        else if (bound === 'palette') { e.preventDefault(); P.open(provider); } // sheet → palette
+        return; // everything else falls through to the sheet itself (arrows scroll it)
+      }
       if (k === 'Escape' || keys[specOf(e)] === 'palette') { e.preventDefault(); P.close(); }
       else if (k === 'Enter') { e.preventDefault(); P.run(); }
       else if (k === 'ArrowDown' || (e.ctrlKey && k === 'n')) { e.preventDefault(); P.move(1); }
