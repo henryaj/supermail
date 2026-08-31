@@ -117,6 +117,16 @@ SM.unsubscribeControl = () => {
     .find((e) => /^unsubscribe$/i.test((e.textContent || '').trim())) || null;
 };
 
+// The confirm button inside Gmail's unsubscribe dialog. Matched on text, like the trigger,
+// and deliberately not by position — the dialog also holds a Cancel we must never hit.
+SM.unsubscribeConfirm = () => {
+  const dlg = [...document.querySelectorAll('[role="dialog"], [role="alertdialog"]')]
+    .find((d) => d.offsetParent && /unsubscribe/i.test(d.innerText || ''));
+  if (!dlg) return null;
+  return [...dlg.querySelectorAll('[role="button"], button')]
+    .find((b) => /^unsubscribe$/i.test((b.textContent || '').trim())) || null;
+};
+
 SM.go = (hash) => { location.hash = hash; };
 SM.search = (q) => { location.hash = '#search/' + encodeURIComponent(q); };
 

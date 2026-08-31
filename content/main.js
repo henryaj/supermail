@@ -180,12 +180,32 @@
   }
 
   // ---- commands that aren't just a keystroke -------------------------------
+  // Gmail's dialog is async in both directions, so poll rather than guess at timings.
+  function until(pred, done, tries = 25) {
+    const timer = setInterval(() => {
+      const v = pred();
+      if (v) { clearInterval(timer); done(v); }
+      else if (--tries <= 0) { clearInterval(timer); done(null); }
+    }, 100);
+  }
+
   function unsubscribe() {
     const el = SM.unsubscribeControl();
     if (!el) return toast('No unsubscribe link on this thread');
     const row = el.closest('tr');
     if (row) row.dispatchEvent(new MouseEvent('mouseover', { bubbles: true })); // row actions render on hover
-    SM.realClick(el); // opens Gmail's own confirmation dialog; nothing is sent until you confirm there
+    SM.realClick(el);
+    // Click through Gmail's confirmation too, by request: one keystroke, no modal, no undo.
+    until(SM.unsubscribeConfirm, (confirm) => {
+      if (!confirm) return toast('Unsubscribe dialog never appeared');
+      SM.realClick(confirm);
+      // Then archive it — but only once the dialog is gone, since it swallows keystrokes.
+      until(() => !SM.unsubscribeConfirm(), (gone) => {
+        if (!gone) return toast('Unsubscribed, but the dialog stayed open');
+        SM.rowKey('e');
+        toast('Unsubscribed and archived');
+      });
+    });
   }
 
   function copyLink() {
